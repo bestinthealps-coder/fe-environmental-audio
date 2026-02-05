@@ -58,12 +58,37 @@ def get_audio(client, text, voice):
 
 @st.cache_data
 def load_data():
-    # Carica il CSV. Assicurati che il separatore sia punto e virgola
+    @st.cache_data
+def load_data():
+    file_path = 'flashcards.csv'
+    
+    # Tentativo 1: Formato Excel Italiano (Punto e virgola, encoding Windows)
+    # È il più probabile visto che hai usato un Excel italiano
     try:
-        df = pd.read_csv('flashcards.csv', sep=';')
-        return df
+        df = pd.read_csv(file_path, sep=';', encoding='latin-1')
+        if not df.empty and 'question' in df.columns:
+            return df
     except:
+        pass
+
+    # Tentativo 2: Formato Standard (Virgola, encoding UTF-8)
+    try:
+        df = pd.read_csv(file_path, sep=',')
+        if not df.empty and 'question' in df.columns:
+            return df
+    except:
+        pass
+
+    # Tentativo 3: Formato Misto (Virgola, encoding Windows)
+    try:
+        df = pd.read_csv(file_path, sep=',', encoding='latin-1')
+        if not df.empty and 'question' in df.columns:
+            return df
+    except Exception as e:
+        st.error(f"ERRORE DI LETTURA: {e}")
         return pd.DataFrame()
+    
+    return pd.DataFrame()
 
 # --- CARICAMENTO DATI ---
 df = load_data()
@@ -155,3 +180,4 @@ if st.button("🔀 Mescola Mazzo (Shuffle)"):
     st.session_state.show_answer = False
 
     st.rerun()
+
