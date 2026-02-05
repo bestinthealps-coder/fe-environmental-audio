@@ -2,16 +2,8 @@ import streamlit as st
 import pandas as pd
 from openai import OpenAI
 import random
-import streamlit as st
-import pandas as pd
-import os # <--- Assicurati che questo sia importato
+import os
 
-# --- DEBUGGING AREA (DA RIMUOVERE DOPO) ---
-st.error("--- INIZIO DIAGNOSTICA ---")
-st.write("Il server sta eseguendo il codice in questa cartella:", os.getcwd())
-st.write("Ecco TUTTI i file che il server vede qui:", os.listdir())
-st.error("--- FINE DIAGNOSTICA ---")
-# ------------------------------------------
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="FE Environmental Audio Prep", layout="centered", page_icon="🎧")
 
@@ -58,12 +50,9 @@ def get_audio(client, text, voice):
 
 @st.cache_data
 def load_data():
-    @st.cache_data
-def load_data():
     file_path = 'flashcards.csv'
     
     # Tentativo 1: Formato Excel Italiano (Punto e virgola, encoding Windows)
-    # È il più probabile visto che hai usato un Excel italiano
     try:
         df = pd.read_csv(file_path, sep=';', encoding='latin-1')
         if not df.empty and 'question' in df.columns:
@@ -94,7 +83,9 @@ def load_data():
 df = load_data()
 
 if df.empty:
-    st.error("File 'flashcards.csv' non trovato o vuoto. Caricalo nella repository GitHub.")
+    st.error("File 'flashcards.csv' non trovato o impossibile da leggere. Controlla che il file esista su GitHub e abbia le colonne: id,category,question,answer")
+    # Debug info
+    st.write("File nella cartella:", os.listdir())
     st.stop()
 
 # --- STATO DELLA SESSIONE ---
@@ -104,8 +95,6 @@ if 'shuffled_indices' not in st.session_state:
     st.session_state.shuffled_indices = list(range(len(df)))
 if 'show_answer' not in st.session_state:
     st.session_state.show_answer = False
-if 'study_mode' not in st.session_state:
-    st.session_state.study_mode = "Sequenziale"
 
 # --- FILTRI (OPZIONALE) ---
 categories = ["Tutti"] + list(df['category'].unique()) if 'category' in df.columns else []
@@ -114,13 +103,35 @@ if categories:
     if selected_cat != "Tutti":
         # Filtra gli indici basandosi sulla categoria
         filtered_indices = df[df['category'] == selected_cat].index.tolist()
-        # Se cambiamo categoria, resettiamo il mazzo
-        if len(filtered_indices) > 0:
+        # Se cambiamo categoria, resettiamo il mazzo se necessario
+        # (Qui semplifico per evitare bug di reset continuo: ricalcolo solo se la lista corrente non matcha)
+        current_selection_set = set(filtered_indices)
+        current_shuffled_set = set(st.session_state.shuffled_indices)
+        
+        # Logica base: se l'utente filtra, mostriamo solo quelle
+        # Nota: per semplicità, se filtriamo, ricreiamo la lista filtrata
+        # Per evitare loop infiniti in Streamlit, facciamo il reset solo se l'utente cambia filtro attivamente
+        # Ma per ora, forziamo il filtraggio semplice:
+        if len(st.session_state.shuffled_indices) != len(filtered_indices) or not set(st.session_state.shuffled_indices).issubset(set(df[df['category'] == selected_cat].index)):
              st.session_state.shuffled_indices = filtered_indices
              st.session_state.index = 0
+    else:
+        # Se torna a "Tutti" e non ha tutti gli indici, resetta
+        if len(st.session_state.shuffled_indices) != len(df):
+            st.session_state.shuffled_indices = list(range(len(df)))
+            st.session_state.index = 0
 
 # --- LOGICA NAVIGAZIONE ---
-current_idx = st.session_state.shuffled_indices[st.session_state.index] if st.session_state.shuffled_indices else 0
+# Protezione caso indici vuoti
+if not st.session_state.shuffled_indices:
+    st.warning("Nessuna domanda trovata per questa categoria.")
+    st.stop()
+
+# Assicuriamoci che l'indice non vada fuori range
+if st.session_state.index >= len(st.session_state.shuffled_indices):
+    st.session_state.index = 0
+
+current_idx = st.session_state.shuffled_indices[st.session_state.index]
 card = df.iloc[current_idx]
 
 # --- INTERFACCIA UTENTE ---
@@ -178,6 +189,4 @@ if st.button("🔀 Mescola Mazzo (Shuffle)"):
     random.shuffle(st.session_state.shuffled_indices)
     st.session_state.index = 0
     st.session_state.show_answer = False
-
     st.rerun()
-
