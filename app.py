@@ -36,34 +36,36 @@ st.markdown("""
 
 # --- SIDEBAR: IMPOSTAZIONI ---
 with st.sidebar:
-    st.title("⚙️ Setup")
+    st.title("⚙️ Setup Ingegnere")
     api_key = st.text_input("OpenAI API Key", type="password", help="Inserisci la tua chiave qui")
     
     st.divider()
     
-    st.subheader("🗣️ Voci")
+    st.subheader("🗣️ Configurazione Vocale")
     voice_q = st.selectbox("Voce Domanda", ["echo", "alloy", "fable", "onyx", "nova", "shimmer"], index=1)
     voice_a = st.selectbox("Voce Risposta", ["nova", "alloy", "echo", "fable", "onyx", "shimmer"], index=0)
+    
+    # NUOVO: Slider Velocità
+    voice_speed = st.slider("Velocità Parlato (Speed)", min_value=0.5, max_value=2.0, value=1.0, step=0.05, help="1.0 è normale. 1.25 è ottimo per ripasso veloce.")
     
     st.divider()
     
     st.subheader("⏱️ Tempi Auto-Loop")
-    # Slider per controllare la velocità del loop
-    think_time = st.slider("Tempo per pensare (sec)", min_value=2, max_value=15, value=5, help="Pausa tra domanda e risposta")
-    review_time = st.slider("Pausa post-risposta (sec)", min_value=2, max_value=10, value=3, help="Pausa prima della prossima domanda")
+    think_time = st.slider("Tempo per pensare (sec)", min_value=2, max_value=30, value=5)
+    review_time = st.slider("Pausa post-risposta (sec)", min_value=2, max_value=15, value=3)
 
 # --- FUNZIONI ---
-def get_audio(client, text, voice):
-    """Genera l'audio tramite API OpenAI"""
+def get_audio(client, text, voice, speed_val):
+    """Genera l'audio tramite API OpenAI con velocità variabile"""
     try:
         response = client.audio.speech.create(
             model="tts-1",
             voice=voice,
-            input=text
+            input=text,
+            speed=speed_val # Parametro velocità aggiunto
         )
         return response.content
     except Exception as e:
-        # Non mostriamo errore in loop per non bloccare flusso, solo console
         print(f"Errore audio: {e}")
         return None
 
@@ -96,7 +98,7 @@ if df.empty:
 if 'index' not in st.session_state: st.session_state.index = 0
 if 'shuffled_indices' not in st.session_state: st.session_state.shuffled_indices = list(range(len(df)))
 if 'is_looping' not in st.session_state: st.session_state.is_looping = False
-if 'loop_phase' not in st.session_state: st.session_state.loop_phase = 'question' # stati: question, answer, next
+if 'loop_phase' not in st.session_state: st.session_state.loop_phase = 'question'
 
 # --- GESTIONE CATEGORIE ---
 categories = ["Tutti"] + list(df['category'].unique()) if 'category' in df.columns else []
@@ -104,7 +106,6 @@ if categories:
     selected_cat = st.selectbox("Filtra per materia:", categories, disabled=st.session_state.is_looping)
     if selected_cat != "Tutti":
         filtered_indices = df[df['category'] == selected_cat].index.tolist()
-        # Aggiorna solo se non stiamo già loopando per evitare reset improvvisi
         if not st.session_state.is_looping:
             current_subset = set(st.session_state.shuffled_indices)
             target_subset = set(filtered_indices)
@@ -123,14 +124,12 @@ if st.session_state.is_looping:
         st.session_state.loop_phase = 'question'
         st.rerun()
 
-# Recupera card corrente
 if not st.session_state.shuffled_indices:
     st.error("Nessuna domanda disponibile.")
     st.stop()
     
-# Controllo overflow indice
 if st.session_state.index >= len(st.session_state.shuffled_indices):
-    st.session_state.index = 0 # Ricomincia il giro
+    st.session_state.index = 0
 
 current_idx = st.session_state.shuffled_indices[st.session_state.index]
 card = df.iloc[current_idx]
@@ -139,57 +138,55 @@ card = df.iloc[current_idx]
 st.progress((st.session_state.index + 1) / len(st.session_state.shuffled_indices))
 st.caption(f"Domanda {st.session_state.index + 1} / {len(st.session_state.shuffled_indices)}")
 
-# CARD CONTAINER
 with st.container(border=True):
-    # Mostra Domanda
+    # Domanda
     st.markdown(f"<p class='big-font'>{card['question']}</p>", unsafe_allow_html=True)
     
-    # Logica Audio Domanda (Solo se in loop e fase domanda, o manuale)
+    # Audio Loop Domanda
     if st.session_state.is_looping and st.session_state.loop_phase == 'question':
         if api_key:
             client = OpenAI(api_key=api_key)
-            audio_q = get_audio(client, card['question'], voice_q)
+            # Passiamo voice_speed alla funzione
+            audio_q = get_audio(client, card['question'], voice_q, voice_speed)
             if audio_q:
                 st.audio(audio_q, format="audio/mp3", autoplay=True)
-                # Aspettiamo la durata dell'audio (stimata) + tempo per pensare
                 time.sleep(think_time + 2) 
                 st.session_state.loop_phase = 'answer'
                 st.rerun()
         else:
-            st.warning("Manca API Key per il loop")
+            st.warning("Manca API Key")
             st.session_state.is_looping = False
 
-    # Mostra Risposta (se richiesta o fase answer del loop)
+    # Risposta
     show_ans_manual = st.session_state.get('show_answer_manual', False)
     if show_ans_manual or (st.session_state.is_looping and st.session_state.loop_phase == 'answer'):
         st.divider()
         st.markdown(f"<p class='answer-font'>{card['answer']}</p>", unsafe_allow_html=True)
         
-        # Logica Audio Risposta
+        # Audio Loop Risposta
         if st.session_state.is_looping and st.session_state.loop_phase == 'answer':
             if api_key:
                 client = OpenAI(api_key=api_key)
-                audio_a = get_audio(client, card['answer'], voice_a)
+                # Passiamo voice_speed alla funzione
+                audio_a = get_audio(client, card['answer'], voice_a, voice_speed)
                 if audio_a:
                     st.audio(audio_a, format="audio/mp3", autoplay=True)
-                    time.sleep(review_time + 2) # Tempo per metabolizzare la risposta
-                    
-                    # Passa alla prossima
+                    time.sleep(review_time + 2)
                     st.session_state.index += 1
                     st.session_state.loop_phase = 'question'
                     st.rerun()
 
-# --- CONTROLLI MANUALI (Nascosti se in loop) ---
+# --- CONTROLLI MANUALI ---
 if not st.session_state.is_looping:
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     
-    # Audio Manuale Domanda
     if api_key:
          with c1:
             if st.button("🔊 Audio"):
                 client = OpenAI(api_key=api_key)
-                aud = get_audio(client, card['question'], voice_q)
+                # Passiamo voice_speed anche al manuale
+                aud = get_audio(client, card['question'], voice_q, voice_speed)
                 st.audio(aud, format="audio/mp3", autoplay=True)
 
     with c2:
@@ -204,7 +201,6 @@ if not st.session_state.is_looping:
             st.rerun()
             
     st.markdown("---")
-    # TASTO AVVIO LOOP
     if st.button("▶️ AVVIA STUDIO LOOP (AUTOMATICO)"):
         st.session_state.is_looping = True
         st.session_state.loop_phase = 'question'
