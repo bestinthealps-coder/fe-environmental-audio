@@ -12,7 +12,7 @@ st.set_page_config(page_title="FE Environmental Audio Prep", layout="centered", 
 with st.sidebar:
     st.title("⚙️ Setup Ingegnere")
     
-    # --- DARK MODE TOGGLE (NUOVO) ---
+    # --- DARK MODE TOGGLE ---
     dark_mode = st.toggle("🌙 Dark Mode", value=False, help="Attiva sfondo scuro per riposare gli occhi")
     
     st.divider()
@@ -33,59 +33,83 @@ with st.sidebar:
     review_time = st.slider("Pausa post-risposta (sec)", min_value=2, max_value=15, value=3)
 
 # --- CSS DINAMICO (GESTIONE DARK/LIGHT MODE) ---
-# Definiamo i colori in base alla scelta dell'utente
 if dark_mode:
-    # Colori per Dark Mode (Sfondo Antracite, Testo Chiaro, Card Grigie)
+    # --- STILE DARK MODE ---
     custom_css = """
     <style>
-    /* Sfondo Principale */
+    /* 1. Sfondo generale dell'App e Sidebar */
     .stApp {
         background-color: #121212;
         color: #FAFAFA;
     }
-    /* Sidebar */
     [data-testid="stSidebar"] {
         background-color: #1E1E1E;
     }
-    /* Container/Card Domande (Bordo e Sfondo) */
+    
+    /* 2. Container/Card delle Domande */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #2C2C2C;
         border-color: #444444;
     }
-    /* Testi */
-    h1, h2, h3, p, span {
+    
+    /* 3. Testi Generici (Titoli, paragrafi) in bianco */
+    h1, h2, h3, p, span, div, label {
         color: #FAFAFA !important;
     }
-    /* Input Fields scuri */
+
+    /* 4. FIX BOTTONI STANDARD (Audio, Soluzione, ecc.) */
+    div[data-testid="stButton"] > button {
+        background-color: #333333 !important; /* Sfondo scuro per il bottone */
+        color: #FFFFFF !important;             /* Testo bianco */
+        border: 1px solid #555555 !important;  /* Bordo sottile */
+    }
+    div[data-testid="stButton"] > button:hover {
+        border-color: #81c784 !important;      /* Bordo verde al passaggio del mouse */
+        color: #FFFFFF !important;
+    }
+
+    /* 5. Input Fields (Box testo API Key, Selectbox) */
     .stTextInput input, .stSelectbox div[data-baseweb="select"] > div {
         background-color: #2C2C2C !important;
         color: white !important;
+        -webkit-text-fill-color: white !important; /* Forza colore su Safari/Chrome */
     }
-    /* Bottone Stop Rosso (Manteniamo visibilità) */
-    div[data-testid="stButton"] > button:contains("Stop") {
-        background-color: #CF6679 !important;
+
+    /* 6. Bottone STOP (Eccezione Rossa) */
+    div[data-testid="stButton"] > button p:contains("STOP") {
         color: white !important;
-        border: none;
+    }
+    /* Cerchiamo il bottone che contiene il testo STOP in modo euristico */
+    div[data-testid="stButton"] > button:active {
+        color: white !important;
     }
     </style>
     """
-    card_answer_color = "#81c784" # Verde più chiaro per leggibilità su scuro
+    card_answer_color = "#81c784" # Verde chiaro per la risposta
+    
+    # CSS Extra per colorare di rosso specificamente il tasto STOP in dark mode
+    # Streamlit non permette selettori :has() ovunque, quindi usiamo un trucco:
+    # coloriamo il background di tutti i bottoni scuri (fatto sopra), 
+    # ma il tasto stop lo definiamo nell'interfaccia con un container diverso se possibile
+    # Per ora lo lasciamo grigio scuro come gli altri per uniformità, o rosso se riusciamo.
+    
 else:
-    # Colori per Light Mode (Default)
+    # --- STILE LIGHT MODE (Default) ---
     custom_css = """
     <style>
     /* Evidenzia il bottone Stop in rosso chiaro */
-    div[data-testid="stButton"] > button:contains("Stop") {
-        background-color: #ffcdd2;
-        color: #b71c1c;
+    div[data-testid="stButton"] > button {
+        background-color: #FFFFFF;
+        color: #000000;
     }
     </style>
     """
     card_answer_color = "#2e7d32" # Verde scuro standard
 
-# Iniettiamo il CSS comune (bottoni grandi) + quello specifico (dark/light)
+# --- INIEZIONE CSS GLOBALE ---
 st.markdown(f"""
     <style>
+    /* Stile comune a entrambe le modalità */
     .stButton>button {{
         width: 100%;
         height: 60px;
@@ -99,7 +123,15 @@ st.markdown(f"""
     }}
     .answer-font {{
         font-size: 20px !important;
-        color: {card_answer_color};
+        color: {card_answer_color} !important; /* Importante per sovrascrivere il bianco globale */
+        font-weight: bold;
+    }}
+    /* Tasto STOP specifico (selettore avanzato CSS) */
+    div[data-testid="stButton"] > button:has(div p:contains("STOP")), 
+    div[data-testid="stButton"] > button:has(p:contains("STOP")) {{
+        background-color: #e57373 !important;
+        color: white !important;
+        border: none !important;
     }}
     </style>
     {custom_css}
@@ -107,7 +139,6 @@ st.markdown(f"""
 
 # --- FUNZIONI ---
 def get_audio(client, text, voice, speed_val):
-    """Genera l'audio tramite API OpenAI con velocità variabile"""
     try:
         response = client.audio.speech.create(
             model="tts-1",
@@ -123,17 +154,14 @@ def get_audio(client, text, voice, speed_val):
 @st.cache_data
 def load_data():
     file_path = 'flashcards.csv'
-    # Tentativo 1: Formato Excel Italiano
     try:
         df = pd.read_csv(file_path, sep=';', encoding='latin-1')
         if not df.empty and 'question' in df.columns: return df
     except: pass
-    # Tentativo 2: Formato Standard
     try:
         df = pd.read_csv(file_path, sep=',')
         if not df.empty and 'question' in df.columns: return df
     except: pass
-    # Tentativo 3: Misto
     try:
         df = pd.read_csv(file_path, sep=',', encoding='latin-1')
         if not df.empty and 'question' in df.columns: return df
