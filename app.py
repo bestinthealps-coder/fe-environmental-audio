@@ -2,7 +2,16 @@ import streamlit as st
 import pandas as pd
 from openai import OpenAI
 import random
+import streamlit as st
+import pandas as pd
+import os # <--- Assicurati che questo sia importato
 
+# --- DEBUGGING AREA (DA RIMUOVERE DOPO) ---
+st.error("--- INIZIO DIAGNOSTICA ---")
+st.write("Il server sta eseguendo il codice in questa cartella:", os.getcwd())
+st.write("Ecco TUTTI i file che il server vede qui:", os.listdir())
+st.error("--- FINE DIAGNOSTICA ---")
+# ------------------------------------------
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="FE Environmental Audio Prep", layout="centered", page_icon="🎧")
 
@@ -144,4 +153,5 @@ if st.button("🔀 Mescola Mazzo (Shuffle)"):
     random.shuffle(st.session_state.shuffled_indices)
     st.session_state.index = 0
     st.session_state.show_answer = False
+
     st.rerun()
