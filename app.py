@@ -5,39 +5,39 @@ import random
 import os
 import time
 
-# --- PAGE CONFIGURATION ---
+# --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="FE Environmental Audio Prep", layout="centered", page_icon="🎧")
 
-# --- SIDEBAR: SETTINGS ---
+# --- SIDEBAR: IMPOSTAZIONI ---
 with st.sidebar:
-    st.title("⚙️ Engineering Setup")
+    st.title("⚙️ Setup Ingegnere")
     
     # --- DARK MODE TOGGLE ---
-    dark_mode = st.toggle("🌙 Dark Mode", value=False, help="Enable dark background for eye relief during long sessions")
+    dark_mode = st.toggle("🌙 Dark Mode", value=False, help="Attiva sfondo scuro per riposare gli occhi")
     
     st.divider()
     
-    api_key = st.text_input("OpenAI API Key", type="password", help="Enter your API Key here")
+    api_key = st.text_input("OpenAI API Key", type="password", help="Inserisci la tua chiave qui")
     
-    st.subheader("🗣️ Voice Configuration")
-    voice_q = st.selectbox("Question Voice", ["echo", "alloy", "fable", "onyx", "nova", "shimmer"], index=1)
-    voice_a = st.selectbox("Answer Voice", ["nova", "alloy", "echo", "fable", "onyx", "shimmer"], index=0)
+    st.subheader("🗣️ Configurazione Vocale")
+    voice_q = st.selectbox("Voce Domanda", ["echo", "alloy", "fable", "onyx", "nova", "shimmer"], index=1)
+    voice_a = st.selectbox("Voce Risposta", ["nova", "alloy", "echo", "fable", "onyx", "shimmer"], index=0)
     
-    # Speed Slider
-    voice_speed = st.slider("Speech Speed (x)", min_value=0.5, max_value=2.0, value=1.0, step=0.05, help="1.0 is normal speed. Increase to review faster.")
+    # Slider Velocità
+    voice_speed = st.slider("Velocità Parlato (Speed)", min_value=0.5, max_value=2.0, value=1.0, step=0.05)
     
     st.divider()
     
-    st.subheader("⏱️ Auto-Loop Timings")
-    think_time = st.slider("Thinking Time (sec)", min_value=2, max_value=30, value=5, help="Pause after the question")
-    review_time = st.slider("Post-Answer Pause (sec)", min_value=2, max_value=15, value=3, help="Pause before the next question")
+    st.subheader("⏱️ Tempi Auto-Loop")
+    think_time = st.slider("Tempo per pensare (sec)", min_value=2, max_value=30, value=5)
+    review_time = st.slider("Pausa post-risposta (sec)", min_value=2, max_value=15, value=3)
 
-# --- DYNAMIC CSS (DARK/LIGHT MODE HANDLING) ---
+# --- CSS DINAMICO (GESTIONE DARK/LIGHT MODE) ---
 if dark_mode:
-    # --- DARK MODE STYLE ---
+    # --- STILE DARK MODE ---
     custom_css = """
     <style>
-    /* 1. Main Background */
+    /* 1. Sfondo generale dell'App e Sidebar */
     .stApp {
         background-color: #121212;
         color: #FAFAFA;
@@ -46,60 +46,70 @@ if dark_mode:
         background-color: #1E1E1E;
     }
     
-    /* 2. Card Container */
+    /* 2. Container/Card delle Domande */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #2C2C2C;
         border-color: #444444;
     }
     
-    /* 3. General Text (Headers, paragraphs) */
+    /* 3. Testi Generici (Titoli, paragrafi) in bianco */
     h1, h2, h3, p, span, div, label {
         color: #FAFAFA !important;
     }
 
-    /* 4. BUTTON FIX (Force dark background on standard buttons) */
+    /* 4. FIX BOTTONI STANDARD (Audio, Soluzione, ecc.) */
     div[data-testid="stButton"] > button {
-        background-color: #333333 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #555555 !important;
+        background-color: #333333 !important; /* Sfondo scuro per il bottone */
+        color: #FFFFFF !important;             /* Testo bianco */
+        border: 1px solid #555555 !important;  /* Bordo sottile */
     }
     div[data-testid="stButton"] > button:hover {
-        border-color: #81c784 !important;
+        border-color: #81c784 !important;      /* Bordo verde al passaggio del mouse */
         color: #FFFFFF !important;
     }
 
-    /* 5. Input Fields */
+    /* 5. Input Fields (Box testo API Key, Selectbox) */
     .stTextInput input, .stSelectbox div[data-baseweb="select"] > div {
         background-color: #2C2C2C !important;
         color: white !important;
-        -webkit-text-fill-color: white !important;
+        -webkit-text-fill-color: white !important; /* Forza colore su Safari/Chrome */
     }
 
-    /* 6. STOP BUTTON EXCEPTION (Red text/style preservation) */
+    /* 6. Bottone STOP (Eccezione Rossa) */
     div[data-testid="stButton"] > button p:contains("STOP") {
+        color: white !important;
+    }
+    /* Cerchiamo il bottone che contiene il testo STOP in modo euristico */
+    div[data-testid="stButton"] > button:active {
         color: white !important;
     }
     </style>
     """
-    card_answer_color = "#81c784" # Light Green for dark mode
+    card_answer_color = "#81c784" # Verde chiaro per la risposta
+    
+    # CSS Extra per colorare di rosso specificamente il tasto STOP in dark mode
+    # Streamlit non permette selettori :has() ovunque, quindi usiamo un trucco:
+    # coloriamo il background di tutti i bottoni scuri (fatto sopra), 
+    # ma il tasto stop lo definiamo nell'interfaccia con un container diverso se possibile
+    # Per ora lo lasciamo grigio scuro come gli altri per uniformità, o rosso se riusciamo.
     
 else:
-    # --- LIGHT MODE STYLE (Default) ---
+    # --- STILE LIGHT MODE (Default) ---
     custom_css = """
     <style>
-    /* Highlight Stop button in light red */
+    /* Evidenzia il bottone Stop in rosso chiaro */
     div[data-testid="stButton"] > button {
         background-color: #FFFFFF;
         color: #000000;
     }
     </style>
     """
-    card_answer_color = "#2e7d32" # Dark Green for light mode
+    card_answer_color = "#2e7d32" # Verde scuro standard
 
-# --- INJECT GLOBAL CSS ---
+# --- INIEZIONE CSS GLOBALE ---
 st.markdown(f"""
     <style>
-    /* Common Styles */
+    /* Stile comune a entrambe le modalità */
     .stButton>button {{
         width: 100%;
         height: 60px;
@@ -113,10 +123,10 @@ st.markdown(f"""
     }}
     .answer-font {{
         font-size: 20px !important;
-        color: {card_answer_color} !important;
+        color: {card_answer_color} !important; /* Importante per sovrascrivere il bianco globale */
         font-weight: bold;
     }}
-    /* SPECIFIC STOP BUTTON STYLE (Targeting text content) */
+    /* Tasto STOP specifico (selettore avanzato CSS) */
     div[data-testid="stButton"] > button:has(div p:contains("STOP")), 
     div[data-testid="stButton"] > button:has(p:contains("STOP")) {{
         background-color: #e57373 !important;
@@ -127,7 +137,7 @@ st.markdown(f"""
     {custom_css}
     """, unsafe_allow_html=True)
 
-# --- FUNCTIONS ---
+# --- FUNZIONI ---
 def get_audio(client, text, voice, speed_val):
     try:
         response = client.audio.speech.create(
@@ -138,33 +148,30 @@ def get_audio(client, text, voice, speed_val):
         )
         return response.content
     except Exception as e:
-        print(f"Audio Error: {e}")
+        print(f"Errore audio: {e}")
         return None
 
 @st.cache_data
 def load_data():
     file_path = 'flashcards.csv'
-    # Attempt 1: Semicolon (European/Italian Excel)
     try:
         df = pd.read_csv(file_path, sep=';', encoding='latin-1')
         if not df.empty and 'question' in df.columns: return df
     except: pass
-    # Attempt 2: Comma (Standard CSV)
     try:
         df = pd.read_csv(file_path, sep=',')
         if not df.empty and 'question' in df.columns: return df
     except: pass
-    # Attempt 3: Mixed
     try:
         df = pd.read_csv(file_path, sep=',', encoding='latin-1')
         if not df.empty and 'question' in df.columns: return df
     except: return pd.DataFrame()
     return pd.DataFrame()
 
-# --- STATE INITIALIZATION ---
+# --- INIT STATO ---
 df = load_data()
 if df.empty:
-    st.error("Error: 'flashcards.csv' file not found or invalid. Please upload it to GitHub.")
+    st.error("Errore: File 'flashcards.csv' non valido o assente.")
     st.stop()
 
 if 'index' not in st.session_state: st.session_state.index = 0
@@ -172,11 +179,11 @@ if 'shuffled_indices' not in st.session_state: st.session_state.shuffled_indices
 if 'is_looping' not in st.session_state: st.session_state.is_looping = False
 if 'loop_phase' not in st.session_state: st.session_state.loop_phase = 'question'
 
-# --- CATEGORY FILTER ---
-categories = ["All"] + list(df['category'].unique()) if 'category' in df.columns else []
+# --- GESTIONE CATEGORIE ---
+categories = ["Tutti"] + list(df['category'].unique()) if 'category' in df.columns else []
 if categories:
-    selected_cat = st.selectbox("Filter by Subject:", categories, disabled=st.session_state.is_looping)
-    if selected_cat != "All":
+    selected_cat = st.selectbox("Filtra per materia:", categories, disabled=st.session_state.is_looping)
+    if selected_cat != "Tutti":
         filtered_indices = df[df['category'] == selected_cat].index.tolist()
         if not st.session_state.is_looping:
             current_subset = set(st.session_state.shuffled_indices)
@@ -188,16 +195,16 @@ if categories:
         st.session_state.shuffled_indices = list(range(len(df)))
         st.session_state.index = 0
 
-# --- LOOP LOGIC ---
+# --- LOGICA LOOP ---
 if st.session_state.is_looping:
-    st.markdown("### 🔴 LOOP ACTIVE")
+    st.markdown("### 🔴 LOOP ATTIVO")
     if st.button("⏹️ STOP LOOP"):
         st.session_state.is_looping = False
         st.session_state.loop_phase = 'question'
         st.rerun()
 
 if not st.session_state.shuffled_indices:
-    st.error("No questions available for this category.")
+    st.error("Nessuna domanda disponibile.")
     st.stop()
     
 if st.session_state.index >= len(st.session_state.shuffled_indices):
@@ -206,15 +213,15 @@ if st.session_state.index >= len(st.session_state.shuffled_indices):
 current_idx = st.session_state.shuffled_indices[st.session_state.index]
 card = df.iloc[current_idx]
 
-# --- VISUAL UI ---
+# --- UI VISUALE ---
 st.progress((st.session_state.index + 1) / len(st.session_state.shuffled_indices))
-st.caption(f"Question {st.session_state.index + 1} of {len(st.session_state.shuffled_indices)}")
+st.caption(f"Domanda {st.session_state.index + 1} / {len(st.session_state.shuffled_indices)}")
 
 with st.container(border=True):
-    # QUESTION
+    # Domanda
     st.markdown(f"<p class='big-font'>{card['question']}</p>", unsafe_allow_html=True)
     
-    # Audio Loop Question
+    # Audio Loop Domanda
     if st.session_state.is_looping and st.session_state.loop_phase == 'question':
         if api_key:
             client = OpenAI(api_key=api_key)
@@ -225,17 +232,16 @@ with st.container(border=True):
                 st.session_state.loop_phase = 'answer'
                 st.rerun()
         else:
-            st.warning("API Key missing")
+            st.warning("Manca API Key")
             st.session_state.is_looping = False
 
-    # ANSWER
+    # Risposta
     show_ans_manual = st.session_state.get('show_answer_manual', False)
     if show_ans_manual or (st.session_state.is_looping and st.session_state.loop_phase == 'answer'):
         st.divider()
-        st.markdown(f"**Answer:**")
         st.markdown(f"<p class='answer-font'>{card['answer']}</p>", unsafe_allow_html=True)
         
-        # Audio Loop Answer
+        # Audio Loop Risposta
         if st.session_state.is_looping and st.session_state.loop_phase == 'answer':
             if api_key:
                 client = OpenAI(api_key=api_key)
@@ -247,7 +253,7 @@ with st.container(border=True):
                     st.session_state.loop_phase = 'question'
                     st.rerun()
 
-# --- MANUAL CONTROLS ---
+# --- CONTROLLI MANUALI ---
 if not st.session_state.is_looping:
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
@@ -260,24 +266,24 @@ if not st.session_state.is_looping:
                 st.audio(aud, format="audio/mp3", autoplay=True)
 
     with c2:
-        if st.button("👁️ Reveal Answer"):
+        if st.button("👁️ Soluzione"):
             st.session_state.show_answer_manual = not st.session_state.get('show_answer_manual', False)
             st.rerun()
             
     with c3:
-        if st.button("Next ➡️"):
+        if st.button("Prossima ➡️"):
             st.session_state.index += 1
             st.session_state.show_answer_manual = False
             st.rerun()
             
     st.markdown("---")
-    if st.button("▶️ START AUTO-LOOP MODE"):
+    if st.button("▶️ AVVIA STUDIO LOOP (AUTOMATICO)"):
         st.session_state.is_looping = True
         st.session_state.loop_phase = 'question'
         st.session_state.show_answer_manual = False
         st.rerun()
 
-    if st.button("🔀 Shuffle Deck"):
+    if st.button("🔀 Shuffle Mazzo"):
         random.shuffle(st.session_state.shuffled_indices)
         st.session_state.index = 0
         st.rerun()
