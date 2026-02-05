@@ -8,51 +8,102 @@ import time
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="FE Environmental Audio Prep", layout="centered", page_icon="🎧")
 
-# --- CSS E STILE ---
-st.markdown("""
-    <style>
-    .stButton>button {
-        width: 100%;
-        height: 60px;
-        font-size: 20px;
-        border-radius: 10px;
-    }
-    .big-font {
-        font-size: 24px !important;
-        font-weight: bold;
-        line-height: 1.4;
-    }
-    .answer-font {
-        font-size: 20px !important;
-        color: #2e7d32;
-    }
-    /* Evidenzia il bottone Stop in rosso */
-    div[data-testid="stButton"] > button:contains("Stop") {
-        background-color: #ffcdd2;
-        color: #b71c1c;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # --- SIDEBAR: IMPOSTAZIONI ---
 with st.sidebar:
     st.title("⚙️ Setup Ingegnere")
-    api_key = st.text_input("OpenAI API Key", type="password", help="Inserisci la tua chiave qui")
+    
+    # --- DARK MODE TOGGLE (NUOVO) ---
+    dark_mode = st.toggle("🌙 Dark Mode", value=False, help="Attiva sfondo scuro per riposare gli occhi")
     
     st.divider()
+    
+    api_key = st.text_input("OpenAI API Key", type="password", help="Inserisci la tua chiave qui")
     
     st.subheader("🗣️ Configurazione Vocale")
     voice_q = st.selectbox("Voce Domanda", ["echo", "alloy", "fable", "onyx", "nova", "shimmer"], index=1)
     voice_a = st.selectbox("Voce Risposta", ["nova", "alloy", "echo", "fable", "onyx", "shimmer"], index=0)
     
-    # NUOVO: Slider Velocità
-    voice_speed = st.slider("Velocità Parlato (Speed)", min_value=0.5, max_value=2.0, value=1.0, step=0.05, help="1.0 è normale. 1.25 è ottimo per ripasso veloce.")
+    # Slider Velocità
+    voice_speed = st.slider("Velocità Parlato (Speed)", min_value=0.5, max_value=2.0, value=1.0, step=0.05)
     
     st.divider()
     
     st.subheader("⏱️ Tempi Auto-Loop")
     think_time = st.slider("Tempo per pensare (sec)", min_value=2, max_value=30, value=5)
     review_time = st.slider("Pausa post-risposta (sec)", min_value=2, max_value=15, value=3)
+
+# --- CSS DINAMICO (GESTIONE DARK/LIGHT MODE) ---
+# Definiamo i colori in base alla scelta dell'utente
+if dark_mode:
+    # Colori per Dark Mode (Sfondo Antracite, Testo Chiaro, Card Grigie)
+    custom_css = """
+    <style>
+    /* Sfondo Principale */
+    .stApp {
+        background-color: #121212;
+        color: #FAFAFA;
+    }
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #1E1E1E;
+    }
+    /* Container/Card Domande (Bordo e Sfondo) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #2C2C2C;
+        border-color: #444444;
+    }
+    /* Testi */
+    h1, h2, h3, p, span {
+        color: #FAFAFA !important;
+    }
+    /* Input Fields scuri */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div {
+        background-color: #2C2C2C !important;
+        color: white !important;
+    }
+    /* Bottone Stop Rosso (Manteniamo visibilità) */
+    div[data-testid="stButton"] > button:contains("Stop") {
+        background-color: #CF6679 !important;
+        color: white !important;
+        border: none;
+    }
+    </style>
+    """
+    card_answer_color = "#81c784" # Verde più chiaro per leggibilità su scuro
+else:
+    # Colori per Light Mode (Default)
+    custom_css = """
+    <style>
+    /* Evidenzia il bottone Stop in rosso chiaro */
+    div[data-testid="stButton"] > button:contains("Stop") {
+        background-color: #ffcdd2;
+        color: #b71c1c;
+    }
+    </style>
+    """
+    card_answer_color = "#2e7d32" # Verde scuro standard
+
+# Iniettiamo il CSS comune (bottoni grandi) + quello specifico (dark/light)
+st.markdown(f"""
+    <style>
+    .stButton>button {{
+        width: 100%;
+        height: 60px;
+        font-size: 20px;
+        border-radius: 10px;
+    }}
+    .big-font {{
+        font-size: 24px !important;
+        font-weight: bold;
+        line-height: 1.4;
+    }}
+    .answer-font {{
+        font-size: 20px !important;
+        color: {card_answer_color};
+    }}
+    </style>
+    {custom_css}
+    """, unsafe_allow_html=True)
 
 # --- FUNZIONI ---
 def get_audio(client, text, voice, speed_val):
@@ -62,7 +113,7 @@ def get_audio(client, text, voice, speed_val):
             model="tts-1",
             voice=voice,
             input=text,
-            speed=speed_val # Parametro velocità aggiunto
+            speed=speed_val
         )
         return response.content
     except Exception as e:
@@ -146,7 +197,6 @@ with st.container(border=True):
     if st.session_state.is_looping and st.session_state.loop_phase == 'question':
         if api_key:
             client = OpenAI(api_key=api_key)
-            # Passiamo voice_speed alla funzione
             audio_q = get_audio(client, card['question'], voice_q, voice_speed)
             if audio_q:
                 st.audio(audio_q, format="audio/mp3", autoplay=True)
@@ -167,7 +217,6 @@ with st.container(border=True):
         if st.session_state.is_looping and st.session_state.loop_phase == 'answer':
             if api_key:
                 client = OpenAI(api_key=api_key)
-                # Passiamo voice_speed alla funzione
                 audio_a = get_audio(client, card['answer'], voice_a, voice_speed)
                 if audio_a:
                     st.audio(audio_a, format="audio/mp3", autoplay=True)
@@ -185,7 +234,6 @@ if not st.session_state.is_looping:
          with c1:
             if st.button("🔊 Audio"):
                 client = OpenAI(api_key=api_key)
-                # Passiamo voice_speed anche al manuale
                 aud = get_audio(client, card['question'], voice_q, voice_speed)
                 st.audio(aud, format="audio/mp3", autoplay=True)
 
