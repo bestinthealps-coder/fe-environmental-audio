@@ -9,12 +9,10 @@ import time
 st.set_page_config(page_title="FE Environmental Audio Prep", layout="centered", page_icon="🎧")
 
 # --- API KEY MANAGEMENT (COMMERCIAL MODE) ---
-# Tenta di recuperare la chiave dai Secrets di Streamlit
 if "OPENAI_API_KEY" in st.secrets:
     api_key = st.secrets["OPENAI_API_KEY"]
     has_valid_key = True
 else:
-    # Fallback: Se non c'è nei secrets, chiedila all'utente (utile per test locale)
     api_key = st.sidebar.text_input("OpenAI API Key", type="password", help="Enter API Key")
     has_valid_key = bool(api_key)
 
@@ -27,7 +25,6 @@ with st.sidebar:
     
     st.divider()
     
-    # Mostriamo lo stato della licenza invece del campo input
     if "OPENAI_API_KEY" in st.secrets:
         st.success("✅ Audio License Active")
     
@@ -47,18 +44,54 @@ with st.sidebar:
 if dark_mode:
     custom_css = """
     <style>
+    /* 1. Sfondo generale scuro */
     .stApp { background-color: #121212; color: #FAFAFA; }
     [data-testid="stSidebar"] { background-color: #1E1E1E; }
+    
+    /* 2. Container e Input Fields */
     div[data-testid="stVerticalBlockBorderWrapper"] { background-color: #2C2C2C; border-color: #444444; }
-    h1, h2, h3, p, span, div, label { color: #FAFAFA !important; }
-    div[data-testid="stButton"] > button { background-color: #333333 !important; color: #FFFFFF !important; border: 1px solid #555555 !important; }
-    div[data-testid="stButton"] > button:hover { border-color: #81c784 !important; color: #FFFFFF !important; }
-    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div { background-color: #2C2C2C !important; color: white !important; -webkit-text-fill-color: white !important; }
+    .stTextInput input { background-color: #2C2C2C !important; color: white !important; }
+    
+    /* 3. Testi generali in bianco */
+    h1, h2, h3, p, span, label { color: #FAFAFA !important; }
+    
+    /* 4. FIX CRITICO PER IL MENU A TENDINA (SELECTBOX) */
+    /* Rendiamo il box di selezione scuro */
+    .stSelectbox div[data-baseweb="select"] > div {
+        background-color: #2C2C2C !important;
+        color: white !important;
+    }
+    /* Rendiamo la LISTA (il menu aperto) scura, così il testo bianco si legge */
+    ul[data-testid="stSelectboxVirtualDropdown"] {
+        background-color: #2C2C2C !important;
+    }
+    /* Gestiamo il colore del testo dentro le opzioni */
+    li[role="option"] div {
+        color: white !important;
+    }
+    /* Effetto Hover (quando passi il mouse sopra) */
+    li[role="option"]:hover {
+        background-color: #444444 !important;
+    }
+
+    /* 5. Bottoni Standard */
+    div[data-testid="stButton"] > button { 
+        background-color: #333333 !important; 
+        color: #FFFFFF !important; 
+        border: 1px solid #555555 !important; 
+    }
+    div[data-testid="stButton"] > button:hover { 
+        border-color: #81c784 !important; 
+        color: #FFFFFF !important; 
+    }
+    
+    /* 6. Bottone STOP (Eccezione) */
     div[data-testid="stButton"] > button p:contains("STOP") { color: white !important; }
     </style>
     """
     card_answer_color = "#81c784"
 else:
+    # --- LIGHT MODE STYLE ---
     custom_css = """
     <style>
     div[data-testid="stButton"] > button { background-color: #FFFFFF; color: #000000; }
