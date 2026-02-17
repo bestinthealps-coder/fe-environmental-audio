@@ -40,6 +40,14 @@ with st.sidebar:
     think_time = st.slider("Thinking Time (sec)", min_value=2, max_value=30, value=5)
     review_time = st.slider("Post-Answer Pause (sec)", min_value=2, max_value=15, value=3)
 
+    st.divider()
+    
+    # --- BUG REPORT / QA SECTION ---
+    st.subheader("🛠️ Support & Feedback")
+    st.caption("Found a typo or a technical issue? Help us improve the app.")
+    # SOSTITUISCI LA MAIL QUI SOTTO CON LA TUA
+    st.link_button("🐞 Report an Issue", "mailto:bestinthealps@gmail.com?subject=FE%20Audio%20App%20Bug%20Report", use_container_width=True)
+
 # --- DYNAMIC CSS ---
 if dark_mode:
     custom_css = """
@@ -214,7 +222,6 @@ with st.container(border=True):
 if not st.session_state.is_looping:
     st.markdown("---")
     
-    # --- MODIFICA: 4 Colonne per aggiungere il pulsante Random ---
     c1, c2, c3, c4 = st.columns(4)
     
     if has_valid_key:
@@ -234,7 +241,6 @@ if not st.session_state.is_looping:
             st.rerun()
     with c4:
         if st.button("🎲 Random"):
-            # Genera un indice casuale all'interno del mazzo attualmente filtrato
             st.session_state.index = random.randint(0, len(st.session_state.shuffled_indices) - 1)
             st.session_state.show_answer_manual = False
             st.rerun()
