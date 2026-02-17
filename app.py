@@ -56,20 +56,16 @@ if dark_mode:
     h1, h2, h3, p, span, label { color: #FAFAFA !important; }
     
     /* 4. FIX CRITICO PER IL MENU A TENDINA (SELECTBOX) */
-    /* Rendiamo il box di selezione scuro */
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: #2C2C2C !important;
         color: white !important;
     }
-    /* Rendiamo la LISTA (il menu aperto) scura, così il testo bianco si legge */
     ul[data-testid="stSelectboxVirtualDropdown"] {
         background-color: #2C2C2C !important;
     }
-    /* Gestiamo il colore del testo dentro le opzioni */
     li[role="option"] div {
         color: white !important;
     }
-    /* Effetto Hover (quando passi il mouse sopra) */
     li[role="option"]:hover {
         background-color: #444444 !important;
     }
@@ -101,7 +97,7 @@ else:
 
 st.markdown(f"""
     <style>
-    .stButton>button {{ width: 100%; height: 60px; font-size: 20px; border-radius: 10px; }}
+    .stButton>button {{ width: 100%; height: 60px; font-size: 18px; border-radius: 10px; padding: 0px !important; }}
     .big-font {{ font-size: 24px !important; font-weight: bold; line-height: 1.4; }}
     .answer-font {{ font-size: 20px !important; color: {card_answer_color} !important; font-weight: bold; }}
     div[data-testid="stButton"] > button:has(div p:contains("STOP")), 
@@ -217,7 +213,10 @@ with st.container(border=True):
 
 if not st.session_state.is_looping:
     st.markdown("---")
-    c1, c2, c3 = st.columns(3)
+    
+    # --- MODIFICA: 4 Colonne per aggiungere il pulsante Random ---
+    c1, c2, c3, c4 = st.columns(4)
+    
     if has_valid_key:
          with c1:
             if st.button("🔊 Audio"):
@@ -225,7 +224,7 @@ if not st.session_state.is_looping:
                 aud = get_audio(client, card['question'], voice_q, voice_speed)
                 st.audio(aud, format="audio/mp3", autoplay=True)
     with c2:
-        if st.button("👁️ Reveal Answer"):
+        if st.button("👁️ Reveal"):
             st.session_state.show_answer_manual = not st.session_state.get('show_answer_manual', False)
             st.rerun()
     with c3:
@@ -233,7 +232,15 @@ if not st.session_state.is_looping:
             st.session_state.index += 1
             st.session_state.show_answer_manual = False
             st.rerun()
+    with c4:
+        if st.button("🎲 Random"):
+            # Genera un indice casuale all'interno del mazzo attualmente filtrato
+            st.session_state.index = random.randint(0, len(st.session_state.shuffled_indices) - 1)
+            st.session_state.show_answer_manual = False
+            st.rerun()
+            
     st.markdown("---")
+    
     if st.button("▶️ START AUTO-LOOP MODE"):
         st.session_state.is_looping = True
         st.session_state.loop_phase = 'question'
